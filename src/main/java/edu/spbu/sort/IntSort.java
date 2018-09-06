@@ -13,6 +13,6 @@ public class IntSort {
   }
 
   public static void sort (List<Integer> list) {
-    Collections.sort(list);
+    // HOMEWORK: replace this with my own sort function
   }
 }
