@@ -185,7 +185,7 @@ public class DenseMatrix implements Matrix
         }
         return null;
     }
-    
+
   @Override public boolean equals(Object o) {
     return false;
   }
