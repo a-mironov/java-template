@@ -21,11 +21,11 @@ public class DenseMatrix implements Matrix
     {
         return entries[i][j];
     }
-    public int rows()
-    {
-        return this.row_count;
-    }
-    public int cols()
+    public int get_row_count()
+{
+    return this.row_count;
+}
+    public int get_col_count()
     {
         return this.col_count;
     }
@@ -86,16 +86,16 @@ public class DenseMatrix implements Matrix
         {
             DenseMatrix o1 = (DenseMatrix) o;
 
-            if(this.col_count != o1.rows())
+            if(this.col_count != o1.get_row_count())
             {
                 throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
-                                                    + o1.rows() + "*" + o1.cols() + "matrix");
+                                                    + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
             }
 
-            DenseMatrix result = new DenseMatrix(this.row_count, o1.cols());
+            DenseMatrix result = new DenseMatrix(this.row_count, o1.get_col_count());
             for(int i = 0; i < this.row_count; i++)
             {
-                for (int j = 0; j < o1.cols(); j++)
+                for (int j = 0; j < o1.get_col_count(); j++)
                 {
                     result.entries[i][j] = 0;
                     for (int k = 0; k < row_count; k++)
@@ -106,7 +106,28 @@ public class DenseMatrix implements Matrix
             }
             return result;
         }
-        return null;
+        else
+        {
+            SparseMatrix o1 = (SparseMatrix) o;
+            if(this.col_count != o1.get_row_count())
+            {
+                throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
+                        + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
+            }
+            DenseMatrix result = new DenseMatrix(this.row_count, o1.get_col_count());
+            for(int i = 0; i < this.row_count; i++)
+            {
+                for (int j = 0; j < o1.get_col_count(); j++)
+                {
+                    result.entries[i][j] = 0;
+                    for (int k = 0; k < row_count; k++)
+                    {
+                        result.entries[i][j] += this.entries[i][k] + o1.get_entry(i, j);
+                    }
+                }
+            }
+            return result;
+        }
     }
 
     /**
@@ -131,12 +152,12 @@ public class DenseMatrix implements Matrix
             DenseMatrix o1 = (DenseMatrix) o;
             final int THREAD_COUNT = 4;
 
-            if(this.col_count != o1.rows())
+            if(this.col_count != o1.get_row_count())
             {
                 throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
-                        + o1.rows() + "*" + o1.cols() + "matrix");
+                        + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
             }
-            DenseMatrix result = new DenseMatrix(this.row_count, o1.cols());
+            DenseMatrix result = new DenseMatrix(this.row_count, o1.get_col_count());
 
             class EntryCalc extends Thread
             {
@@ -162,7 +183,7 @@ public class DenseMatrix implements Matrix
             int counter = 0;
             for(int i = 0; i < row_count; i++)
             {
-                for(int j = 0; j < o1.cols(); j++)
+                for(int j = 0; j < o1.get_col_count(); j++)
                 {
                     threads[counter].list.add(new Entry(i,j));
                     counter = (counter + 1) % THREAD_COUNT;
@@ -186,9 +207,30 @@ public class DenseMatrix implements Matrix
         return null;
     }
 
-  @Override public boolean equals(Object o) {
-    return false;
-  }
+    @Override public boolean equals(Object o)
+    {
+        if(o instanceof DenseMatrix)
+        {
+            DenseMatrix o1 = (DenseMatrix) o;
+            /* check dimension equality */
+            if(row_count != o1.get_row_count())
+                return false;
+            if(col_count != o1.get_col_count())
+                return false;
+            /* run through entries one by one, returning false if a mismatch is found */
+            for(int i = 0; i < row_count; i++)
+            {
+                for(int j = 0; i < col_count; i++)
+                {
+                    if(entries[i][j] != o1.entry(i,j))
+                        return false;
+                }
+            }
+            /* no mismatch found => matrices equal */
+            return true;
+        }
+        return false;
+    }
 
 
 }
