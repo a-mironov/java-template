@@ -17,7 +17,7 @@ public class DenseMatrix implements Matrix
     {
         return (row_count!=0 && col_count!=0);
     }
-    public double entry(int i, int j)
+    public double get_entry(int i, int j)
     {
         return entries[i][j];
     }
@@ -80,7 +80,8 @@ public class DenseMatrix implements Matrix
      * @param o the other matrix
      * @return the product
      */
-    @Override public Matrix mul(Matrix o)
+    @Override
+    public Matrix mul(Matrix o)
     {
         if(o instanceof DenseMatrix)
         {
@@ -100,7 +101,7 @@ public class DenseMatrix implements Matrix
                     result.entries[i][j] = 0;
                     for (int k = 0; k < row_count; k++)
                     {
-                        result.entries[i][j] += this.entries[i][k] + o1.entry(i, j);
+                        result.entries[i][j] += this.entries[i][k] * o1.get_entry(k, j);
                     }
                 }
             }
@@ -122,7 +123,7 @@ public class DenseMatrix implements Matrix
                     result.entries[i][j] = 0;
                     for (int k = 0; k < row_count; k++)
                     {
-                        result.entries[i][j] += this.entries[i][k] + o1.get_entry(i, j);
+                        result.entries[i][j] += this.entries[i][k] * o1.get_entry(k, j);
                     }
                 }
             }
@@ -137,6 +138,7 @@ public class DenseMatrix implements Matrix
      */
     @Override public Matrix dmul(Matrix o)
     {
+        final int THREAD_COUNT = 4;
         class Entry
         {
             public int i;
@@ -150,7 +152,6 @@ public class DenseMatrix implements Matrix
         if(o instanceof DenseMatrix)
         {
             DenseMatrix o1 = (DenseMatrix) o;
-            final int THREAD_COUNT = 4;
 
             if(this.col_count != o1.get_row_count())
             {
@@ -172,7 +173,7 @@ public class DenseMatrix implements Matrix
                         result.entries[i][j] = 0;
                         for(int k = 0; k < col_count; k++)
                         {
-                            result.entries[i][j] += entries[i][k] * o1.entry(k,j);
+                            result.entries[i][j] += entries[i][k] * o1.get_entry(k,j);
                         }
                     }
                 }
@@ -181,6 +182,63 @@ public class DenseMatrix implements Matrix
             for (int i = 0; i < threads.length; ++i)
                 threads[i] = new EntryCalc();
             int counter = 0;
+            /* distribute calculations across threads */
+            for(int i = 0; i < row_count; i++)
+            {
+                for(int j = 0; j < o1.get_col_count(); j++)
+                {
+                    threads[counter].list.add(new Entry(i,j));
+                    counter = (counter + 1) % THREAD_COUNT;
+                }
+            }
+
+            for(EntryCalc t : threads)
+            {
+                try
+                {
+                    t.join();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+
+            return result;
+        }
+        if(o instanceof SparseMatrix)
+        {
+            SparseMatrix o1 = (SparseMatrix) o;
+            if(this.col_count != o1.get_row_count())
+            {
+                throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
+                        + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
+            }
+            DenseMatrix result = new DenseMatrix(this.row_count, o1.get_col_count());
+
+            class EntryCalc extends Thread
+            {
+                public List<Entry> list = new ArrayList<>();
+
+                public void run()
+                {
+                    for(Entry e:list)
+                    {
+                        int i = e.i;
+                        int j = e.j;
+                        result.entries[i][j] = 0;
+                        for(int k = 0; k < col_count; k++)
+                        {
+                            result.entries[i][j] += entries[i][k] * o1.get_entry(k,j);
+                        }
+                    }
+                }
+            }
+            EntryCalc[] threads = new EntryCalc[THREAD_COUNT];
+            for (int i = 0; i < threads.length; ++i)
+                threads[i] = new EntryCalc();
+            int counter = 0;
+            /* distribute calculations across threads */
             for(int i = 0; i < row_count; i++)
             {
                 for(int j = 0; j < o1.get_col_count(); j++)
@@ -222,7 +280,27 @@ public class DenseMatrix implements Matrix
             {
                 for(int j = 0; i < col_count; i++)
                 {
-                    if(entries[i][j] != o1.entry(i,j))
+                    if(entries[i][j] != o1.get_entry(i,j))
+                        return false;
+                }
+            }
+            /* no mismatch found => matrices equal */
+            return true;
+        }
+        if(o instanceof SparseMatrix)
+        {
+            SparseMatrix o1 = (SparseMatrix) o;
+            /* check dimension equality */
+            if(row_count != o1.get_row_count())
+                return false;
+            if(col_count != o1.get_col_count())
+                return false;
+            /* run through entries one by one, returning false if a mismatch is found */
+            for(int i = 0; i < row_count; i++)
+            {
+                for(int j = 0; i < col_count; i++)
+                {
+                    if(entries[i][j] != o1.get_entry(i,j))
                         return false;
                 }
             }

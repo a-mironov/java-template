@@ -25,9 +25,13 @@ public class SparseMatrix implements Matrix
     {
         if(value==0)
         {
+            if(!table.containsKey(i))
+                return;
             table.get(i).remove(j);
             return;
         }
+        if(!table.containsKey(i))
+            table.put(i, new HashMap<>());
         table.get(i).put(j, value);
     }
     public void add_to_entry(int i, int j, double value)
@@ -35,11 +39,11 @@ public class SparseMatrix implements Matrix
         if (value == 0)
             return; /* adding 0 does nothing */
         if (!table.containsKey(i) || !table.get(i).containsKey(j))
-            set_entry(i, j, value); /* if entry was zero, make a new entry */
+            set_entry(i, j, value); /* if get_entry was zero, make a new get_entry */
         else
             set_entry(i, j, get_entry(i, j) + value);
         if(get_entry(i,j)==0)
-            table.get(i).remove(j); /* if entry ended up zero, remove it */
+            table.get(i).remove(j); /* if get_entry ended up zero, remove it */
     }
     public int get_row_count()
     {
@@ -65,7 +69,7 @@ public class SparseMatrix implements Matrix
         int j;
         String[] row_string_array;
         Scanner in = new Scanner(new File(file_name));
-        String row_string = "1";
+        String row_string;
 
         while(in.hasNextLine())
         {
@@ -100,8 +104,8 @@ public class SparseMatrix implements Matrix
 
             for (int i : table.keySet()) {
                 if (table.containsKey(i))
-                    for (int j : table.get(i).keySet()) {
-                        for (int k = 0; k < this.col_count; k++) {
+                    for (int j : result.table.get(i).keySet()) {
+                        for (int k : this.table.get(i).keySet()) {
                             result.add_to_entry(i, j, table.get(i).get(k) + o1.get_entry(k, j));
                         }
                     }
@@ -121,28 +125,149 @@ public class SparseMatrix implements Matrix
 
             for(int i = 0; i < this.row_count; i++)
             {
-                for(int j = 0; j < result.get_col_count(); j++)
-                {
-                    for(int k = 0; k < this.col_count; k++)
+                if(this.table.containsKey(i))
+                    for(int j = 0; j < result.get_col_count(); j++)
                     {
-                        double addend = this.table.get(i).get(k) * o1.entry(k, j);
-                        result.add_to_entry(i, j, addend);
+                        for(int k : this.table.get(i).keySet())
+                        {
+                            double addend = this.table.get(i).get(k) * o1.get_entry(k, j);
+                            result.add_to_entry(i, j, addend);
+                        }
                     }
-                }
             }
             return result;
         }
     }
 
-  /**
-   * многопоточное умножение матриц
-   *
-   * @param o
-   * @return
-   */
-  @Override public Matrix dmul(Matrix o)
-  {
-    return null;
+    /**
+     * multi-threaded multiplication
+     * @param o the other matrix
+     * @return the product
+     */
+    @Override public Matrix dmul(Matrix o)
+    {
+      final int THREAD_COUNT = 4;
+      class Entry
+      {
+          public int i;
+          public int j;
+          Entry(int i, int j)
+          {
+              this.i = i;
+              this.j = j;
+          }
+      }
+      if(o instanceof SparseMatrix)
+      {
+          SparseMatrix o1 = (SparseMatrix) o;
+          if (this.col_count != o1.get_row_count())
+          {
+              throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
+                      + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
+          }
+
+          SparseMatrix result = new SparseMatrix(this.row_count, o1.get_col_count());
+          class EntryCalc extends Thread
+          {
+              public List<Entry> list = new ArrayList<>();
+
+              public void run()
+              {
+                  for(Entry e : list)
+                  {
+                      int i = e.i;
+                      int j = e.j;
+
+                      for(int k : table.get(i).keySet())
+                      {
+                          double addend = table.get(i).get(k) * o1.get_entry(k,j);
+                          result.add_to_entry(i,j,addend);
+                      }
+                  }
+              }
+          }
+          EntryCalc[] threads = new EntryCalc[THREAD_COUNT];
+          for (int i = 0; i < threads.length; ++i)
+              threads[i] = new EntryCalc();
+          int counter = 0;
+          /* distribute calculations across threads */
+          for(int i : table.keySet())
+          {
+              for(int j = 0; j < o1.get_col_count(); j++)
+              {
+                  threads[counter].list.add(new Entry(i,j));
+                  counter = (counter + 1) % THREAD_COUNT;
+              }
+          }
+          for(EntryCalc t : threads)
+          {
+              try
+              {
+                  t.join();
+              }
+              catch (InterruptedException e)
+              {
+                  e.printStackTrace();
+              }
+          }
+
+          return result;
+      }
+      else
+      {
+          DenseMatrix o1 = (DenseMatrix) o;
+          if (this.col_count != o1.get_row_count())
+          {
+              throw new IllegalArgumentException("Cannot multiply " + row_count + "*" + col_count + " matrix by "
+                      + o1.get_row_count() + "*" + o1.get_col_count() + "matrix");
+          }
+          DenseMatrix result = new DenseMatrix(this.row_count, o1.get_col_count());
+          class EntryCalc extends Thread
+          {
+              public List<Entry> list = new ArrayList<>();
+
+              public void run()
+              {
+                  for(Entry e : list)
+                  {
+                      int i = e.i;
+                      int j = e.j;
+
+                      for(int k : table.get(i).keySet())
+                      {
+                          double addend = table.get(i).get(k) * o1.get_entry(k,j);
+                          result.add_to_entry(i,j,addend);
+                      }
+                  }
+              }
+          }
+          EntryCalc[] threads = new EntryCalc[THREAD_COUNT];
+          for (int i = 0; i < threads.length; ++i)
+              threads[i] = new EntryCalc();
+          int counter = 0;
+          /* distribute calculations across threads */
+          for(int i : table.keySet())
+          {
+              for(int j = 0; j < o1.get_col_count(); j++)
+              {
+                  threads[counter].list.add(new Entry(i,j));
+                  counter = (counter + 1) % THREAD_COUNT;
+              }
+          }
+          for(EntryCalc t : threads)
+          {
+              try
+              {
+                  t.join();
+              }
+              catch (InterruptedException e)
+              {
+                  e.printStackTrace();
+              }
+          }
+
+          return result;
+      }
   }
 
   /**
@@ -150,7 +275,34 @@ public class SparseMatrix implements Matrix
    * @param o
    * @return
    */
-  @Override public boolean equals(Object o) {
-    return false;
-  }
+    @Override public boolean equals(Object o)
+    {
+        if(o instanceof SparseMatrix)
+        {
+            SparseMatrix o1 = (SparseMatrix) o;
+            if(row_count != o1.get_row_count())
+                return false;
+            if(col_count != o1.get_col_count())
+                return false;
+            if(this.table.keySet() != o1.table.keySet())
+                return false;
+            for(int i: this.table.keySet())
+            {
+                if (this.table.get(i).keySet() != o1.table.get(i).keySet())
+                    return false;
+                for (int j : this.table.get(i).keySet())
+                {
+                    if(this.table.get(i).get(j) != o1.table.get(i).get(j))
+                        return false;
+                }
+            }
+            return true;
+        }
+        if(o instanceof DenseMatrix)
+        {
+            DenseMatrix o1 = (DenseMatrix) o;
+            return o1.equals(this);
+        }
+        return false;
+    }
 }
