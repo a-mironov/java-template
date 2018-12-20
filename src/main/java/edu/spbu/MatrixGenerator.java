@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Random;
 import java.util.stream.Collectors;
+import edu.spbu.matrix.*;
 
 public class MatrixGenerator
 {
@@ -49,7 +50,7 @@ public class MatrixGenerator
   private static void testPerformance()
   {
     // Uncomment the code to Test your library
-    /*
+
     System.out.println("Starting loading dense matrices");
     Matrix m1 = new DenseMatrix(MATRIX1_NAME);
     System.out.println("1 loaded");
@@ -67,7 +68,7 @@ public class MatrixGenerator
     start = System.currentTimeMillis();
     m1.mul(m2);
     System.out.println("Sparse Matrix time: " +(System.currentTimeMillis() - start));
-    */
+    /* */
   }
 
   public void generate() throws IOException

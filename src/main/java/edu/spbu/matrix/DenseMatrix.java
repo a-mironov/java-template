@@ -41,32 +41,39 @@ public class DenseMatrix implements Matrix
     * loads matrix from file
     * @param file_name source file name
     */
-    public DenseMatrix(String file_name) throws IOException
+    public DenseMatrix(String file_name)
     {
         if(file_name.trim().equals(""))
             return;
 
         int j;
         String[] row_string_array;
-        Scanner in = new Scanner(new File(file_name));
-        String row_string="1";
-
-        while(in.hasNextLine()&&!row_string.trim().equals(""))
+        try
         {
-            row_count += 1;
-            row_string = in.nextLine().trim();
-            row_string_array = row_string.split(" ");
-            if(row_count==1)
+            Scanner in = new Scanner(new File(file_name));
+            String row_string="1";
+
+            while(in.hasNextLine()&&!row_string.trim().equals(""))
             {
-                col_count = row_string_array.length;
-                entries = new double[ARRAY_SIZE][col_count];
+                row_count += 1;
+                row_string = in.nextLine().trim();
+                row_string_array = row_string.split(" ");
+                if(row_count==1)
+                {
+                    col_count = row_string_array.length;
+                    entries = new double[ARRAY_SIZE][col_count];
+                }
+                for(j=0;j<col_count;j++)
+                {
+                    entries[row_count-1][j] = parseDouble(row_string_array[j]);
+                }
             }
-            for(j=0;j<col_count;j++)
-            {
-                entries[row_count-1][j] = parseDouble(row_string_array[j]);
-            }
+            in.close();
         }
-        in.close();
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
     }
     public DenseMatrix(int r, int c)
     {

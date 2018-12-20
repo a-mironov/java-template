@@ -58,28 +58,41 @@ public class SparseMatrix implements Matrix
     {
         row_count = r;
         col_count = c;
+        table = new HashMap<>();
     }
 
     /**
      * loads matrix from file
      * @param file_name source file name
      */
-    public SparseMatrix(String file_name) throws FileNotFoundException
+    public SparseMatrix(String file_name)
     {
+        if(file_name.trim().equals(""))
+            return;
+
         int j;
         String[] row_string_array;
-        Scanner in = new Scanner(new File(file_name));
         String row_string;
-
-        while(in.hasNextLine())
+        try
         {
-            row_count += 1;
-            row_string = in.nextLine();
-            row_string_array = row_string.split(" ");
-            if (row_count == 1)
-                col_count = row_string_array.length;
-            for (j = 0; j < col_count; j++)
-                set_entry(row_count - 1, j, parseDouble(row_string_array[j]));
+            Scanner in = new Scanner(new File(file_name));
+
+
+            while(in.hasNextLine())
+            {
+                row_count += 1;
+                row_string = in.nextLine();
+                row_string_array = row_string.split(" ");
+                if (row_count == 1)
+                    col_count = row_string_array.length;
+                for (j = 0; j < col_count; j++)
+                    set_entry(row_count - 1, j, parseDouble(row_string_array[j]));
+            }
+            in.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
         }
     }
 
@@ -104,9 +117,9 @@ public class SparseMatrix implements Matrix
 
             for (int i : table.keySet()) {
                 if (table.containsKey(i))
-                    for (int j : result.table.get(i).keySet()) {
+                    for (int j : this.table.get(i).keySet()) {
                         for (int k : this.table.get(i).keySet()) {
-                            result.add_to_entry(i, j, table.get(i).get(k) + o1.get_entry(k, j));
+                            result.add_to_entry(i, j, table.get(i).get(k) * o1.get_entry(k, j));
                         }
                     }
             }
