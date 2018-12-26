@@ -39,7 +39,6 @@ public class MatrixGenerator
     {
       new MatrixGenerator(SEED1, EMPTY_ROW_FRACTION, MATRIX1_NAME, SIZE).generate();
       new MatrixGenerator(SEED2, EMPTY_ROW_FRACTION, MATRIX2_NAME, SIZE).generate();
-      fill_result();
       //testPerformance();
     }
     catch (IOException e)
@@ -84,23 +83,6 @@ public class MatrixGenerator
         out.println(emptyRow);
     }
     out.close();
-  }
-
-  public static void fill_result() throws IOException
-  {
-      PrintWriter out = new PrintWriter(new FileWriter("result.txt"));
-      DenseMatrix m1 = new DenseMatrix("m1.txt");
-      DenseMatrix m2 = new DenseMatrix("m2.txt");
-      DenseMatrix result = (DenseMatrix) m1.mul(m2);
-
-      for(int i = 0; i < result.get_row_count(); i++)
-      {
-          for(int j = 0; j < result.get_col_count(); j++)
-          {
-              out.print(result.get_entry(i,j) + " ");
-          }
-          out.println("");
-      }
   }
 
   private String generateRow()
