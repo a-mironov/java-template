@@ -13,10 +13,6 @@ public class DenseMatrix implements Matrix
     private double[][] entries;                 /* contents */
 
     /* auxiliary methods */
-    public boolean is_nondegenerate()
-    {
-        return (row_count!=0 && col_count!=0);
-    }
     public double get_entry(int i, int j)
     {
         return entries[i][j];

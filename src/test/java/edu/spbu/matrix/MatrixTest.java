@@ -35,6 +35,7 @@ public class MatrixTest
       Matrix m1 = new SparseMatrix("m1.txt");
       Matrix m2 = new SparseMatrix("m2.txt");
       Matrix expected = new SparseMatrix("result.txt");
-      assertEquals(expected, m1.mul(m2));
+      SparseMatrix actual = (SparseMatrix) m1.mul(m2);
+      assertEquals(expected, actual);
   }
 }

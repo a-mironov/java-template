@@ -23,12 +23,13 @@ public class SparseMatrix implements Matrix
     }
     public void set_entry(int i, int j, double value)
     {
-        if(value==0)
+        if(value==0.0)
         {
             if(!table.containsKey(i))
                 return;
             table.get(i).remove(j);
-            return;
+            if (table.get(i).keySet().size()==0)
+                table.remove(i);
         }
         if(!table.containsKey(i))
             table.put(i, new HashMap<>());
@@ -44,6 +45,8 @@ public class SparseMatrix implements Matrix
             set_entry(i, j, get_entry(i, j) + value);
         if(get_entry(i,j)==0)
             table.get(i).remove(j); /* if get_entry ended up zero, remove it */
+        if (table.get(i).keySet().size()==0)
+            table.remove(i);
     }
     public int get_row_count()
     {
@@ -53,7 +56,6 @@ public class SparseMatrix implements Matrix
     {
         return this.col_count;
     }
-
     public SparseMatrix(int r, int c) /* zero matrix with fixed size */
     {
         row_count = r;
@@ -86,7 +88,12 @@ public class SparseMatrix implements Matrix
                 if (row_count == 1)
                     col_count = row_string_array.length;
                 for (j = 0; j < col_count; j++)
-                    set_entry(row_count - 1, j, parseDouble(row_string_array[j]));
+                {
+                    double value = parseDouble(row_string_array[j]);
+                    if(value!=0.0)
+                        set_entry(row_count - 1, j, value);
+                }
+
             }
             in.close();
         }
@@ -115,13 +122,22 @@ public class SparseMatrix implements Matrix
 
             SparseMatrix result = new SparseMatrix(this.row_count, o1.get_col_count());
 
-            for (int i : table.keySet()) {
-                if (table.containsKey(i))
-                    for (int j : this.table.get(i).keySet()) {
-                        for (int k : this.table.get(i).keySet()) {
-                            result.add_to_entry(i, j, table.get(i).get(k) * o1.get_entry(k, j));
-                        }
+            for (int i : table.keySet())
+            {
+                for (int j = 0; j < col_count; j++)
+                {
+                    double sum = 0;
+                    for (int k : this.table.get(i).keySet())
+                    {
+                        if(!o1.table.containsKey(k))
+                            continue;
+                        if(!o1.table.get(k).containsKey(j))
+                            continue;
+                        sum += this.table.get(i).get(k) * o1.table.get(k).get(j);
                     }
+                    if(sum!=0.0)
+                        result.set_entry(i, j, sum);
+                }
             }
             return result;
         }
@@ -294,19 +310,35 @@ public class SparseMatrix implements Matrix
         {
             SparseMatrix o1 = (SparseMatrix) o;
             if(row_count != o1.get_row_count())
+            {
+                System.out.println("Row count mismatch");
                 return false;
+            }
+
             if(col_count != o1.get_col_count())
+            {
+                System.out.println("Column count mismatch");
                 return false;
-            if(this.table.keySet() != o1.table.keySet())
+            }
+            if(!this.table.keySet().equals(o1.table.keySet()))
+            {
+                System.out.println("Row set mismatch");
                 return false;
+            }
             for(int i: this.table.keySet())
             {
-                if (this.table.get(i).keySet() != o1.table.get(i).keySet())
+                if (!this.table.get(i).keySet().equals(o1.table.get(i).keySet()))
+                {
+                    System.out.println("Entry set mismatch");
                     return false;
+                }
                 for (int j : this.table.get(i).keySet())
                 {
-                    if(this.table.get(i).get(j) != o1.table.get(i).get(j))
+                    if(!this.table.get(i).get(j).equals(o1.table.get(i).get(j)))
+                    {
+                        System.out.println("Entry mismatch");
                         return false;
+                    }
                 }
             }
             return true;
