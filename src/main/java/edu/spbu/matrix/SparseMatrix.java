@@ -45,7 +45,7 @@ public class SparseMatrix implements Matrix
             set_entry(i, j, get_entry(i, j) + value);
         if(get_entry(i,j)==0)
             table.get(i).remove(j); /* if get_entry ended up zero, remove it */
-        if (table.get(i).keySet().size()==0)
+        if (table.get(i).keySet().isEmpty())
             table.remove(i);
     }
     public int get_row_count()
@@ -196,9 +196,20 @@ public class SparseMatrix implements Matrix
           }
 
           SparseMatrix result = new SparseMatrix(this.row_count, o1.get_col_count());
+          for(int i = 0; i < o1.row_count; ++i)
+          {
+              if(this.table.containsKey(i))
+                  result.table.put(i, new HashMap<>());
+          }
+
           class EntryCalc extends Thread
           {
-              public List<Entry> list = new ArrayList<>();
+              public List<Entry> list;
+
+              private EntryCalc()
+              {
+                  list = new ArrayList<>();
+              }
 
               public void run()
               {
@@ -207,11 +218,14 @@ public class SparseMatrix implements Matrix
                       int i = e.i;
                       int j = e.j;
 
+                      double addend = 0.0;
+
                       for(int k : table.get(i).keySet())
                       {
-                          double addend = table.get(i).get(k) * o1.get_entry(k,j);
-                          result.add_to_entry(i,j,addend);
+                          addend += table.get(i).get(k) * o1.get_entry(k,j);
                       }
+                      System.out.println("Calculated entry (" + i + "," + j + ")");
+                      result.add_to_entry(i,j,addend);
                   }
               }
           }
@@ -224,7 +238,8 @@ public class SparseMatrix implements Matrix
           {
               for(int j = 0; j < o1.get_col_count(); j++)
               {
-                  threads[counter].list.add(new Entry(i,j));
+                  Entry e = new Entry(i,j);
+                  threads[counter].list.add(e);
                   counter = (counter + 1) % THREAD_COUNT;
               }
           }
